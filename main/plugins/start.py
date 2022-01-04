@@ -1,13 +1,14 @@
 #tg:ChauhanMahesh/DroneBots
 #github.com/vasusen-code
 
-import os
-from .. import Drone
+from .. import Drone, ACCESS_CHANNEL, AUTH_USERS
 from telethon import events, Button
 from LOCAL.localisation import START_TEXT as st
 from LOCAL.localisation import JPG0 as file
+from LOCAL.localisation import JPG4
 from LOCAL.localisation import info_text, spam_notice, help_text, DEV, source_text, SUPPORT_LINK
 from ethon.teleutils import mention
+from main.plugins.actions import set_thumbnail, rem_thumbnail, heroku_restart
 
 @Drone.on(events.NewMessage(incoming=True, pattern="/start"))
 async def start(event):
@@ -15,6 +16,8 @@ async def start(event):
                       buttons=[
                               [Button.inline("Menu.", data="menu")]
                               ])
+    tag = f'[{event.sender.first_name}](tg://user?id={event.sender_id})'
+    await Drone.send_message(int(ACCESS_CHANNEL), f'{tag} started the BOT')
     
 @Drone.on(events.callbackquery.CallbackQuery(data="menu"))
 async def menu(event):
@@ -55,8 +58,8 @@ async def notice(event):
 async def source(event):
     await event.edit(source_text,
                     buttons=[[
-                         Button.url("Main.", url="https://github.com/vasusen-code/videoconvertor/tree/main"),
-                         Button.url("PUBLIC", url="https://github.com/vasusen-code/videoconvertor/tree/public")]])
+                         Button.url("Main.", url="https://github.com/Rifaideran/Video-Converter-CMT"),
+                         Button.url("PUBLIC", url="https://github.com/Rifaideran/Video-Converter-CMT/tree/public")]])
                          
                     
 @Drone.on(events.callbackquery.CallbackQuery(data="help"))
@@ -66,7 +69,8 @@ async def help(event):
                          Button.inline("set THUMBNAIL.", data="sett"),
                          Button.inline("rem THUMBNAIL.", data='remt')],
                          [
-                         Button.inline("PLUGUNS..", data="plugins"),
+                         Button.inline("PLUGUNS.", data="plugins"),
+                         Button.inline("restart", data="restart"),
                          Button.url("SUPPORT.", url=f"{SUPPORT_LINK}")],
                          [
                          Button.inline("Menu.", data="menu2")]])
@@ -74,8 +78,9 @@ async def help(event):
 @Drone.on(events.callbackquery.CallbackQuery(data="plugins"))
 async def plugins(event):
     await event.edit(f'{help_text}',
-                    buttons=[[
-                         Button.inline("Menu.", data="menu2")]])
+                    buttons=[[Button.inline("Menu.", data="menu2")]])
+                   
+ #-----------------------------------------------------------------------------------------------                            
     
 @Drone.on(events.callbackquery.CallbackQuery(data="sett"))
 async def sett(event):    
@@ -92,20 +97,22 @@ async def sett(event):
             if not 'jpg' in mime:
                 if not 'jpeg' in mime:
                     return await xx.edit("No image found.")
+        await set_thumbnail(event, x.media)
         await xx.delete()
-        t = await event.client.send_message(event.chat_id, 'Trying.')
-        path = await event.client.download_media(x.media)
-        if os.path.exists(f'{event.sender_id}.jpg'):
-            os.remove(f'{event.sender_id}.jpg')
-        os.rename(path, f'./{event.sender_id}.jpg')
-        await t.edit("Temporary thumbnail saved!")
         
 @Drone.on(events.callbackquery.CallbackQuery(data="remt"))
 async def remt(event):  
-    await event.edit('Trying.')
-    try:
-        os.remove(f'{event.sender_id}.jpg')
-        await event.edit('Removed!')
-    except Exception:
-        await event.edit("No thumbnail saved.")
+    await event.delete()
+    await rem_thumbnail(event)
     
+@Drone.on(events.callbackquery.CallbackQuery(data="restart"))
+async def res(event):
+    if not f'{event.sender_id}' == f'{int(AUTH_USERS)}':
+        return await event.edit("Only authorized user can restart!")
+    result = await heroku_restart()
+    if result is None:
+        await event.edit("You have not filled `HEROKU_API` and `HEROKU_APP_NAME` vars.")
+    elif result is False:
+        await event.edit("An error occured!")
+    elif result is True:
+        await event.edit("Restarting app, wait for a minute.")
